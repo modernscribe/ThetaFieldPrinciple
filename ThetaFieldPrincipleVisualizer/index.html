@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Φ(Z,t) Spiral Periodic Table</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0f14;color:#e6eef7;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+  #canvas{display:block;width:100vw;height:100vh}
+  #ui{position:fixed;top:10px;left:10px;display:flex;flex-direction:column;gap:10px;background:#101720cc;border:1px solid #1d2630;border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);min-width:320px;max-width:420px;resize:both;overflow:auto}
+  #ui h1{margin:0 0 6px 0;font-size:14px;color:#9ecbff;letter-spacing:.2px}
+  .group{border-top:1px solid #1d2630;padding-top:8px;margin-top:6px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row.stretch{align-items:stretch}
+  label{font-size:12px;opacity:.9;white-space:nowrap}
+  .field{display:flex;align-items:center;gap:6px}
+  .field span{font-size:11px;opacity:.85;min-width:44px}
+  select,input[type=range],input[type=number],button{background:#1a2430;border:1px solid #2a3a4e;color:#e6eef7;border-radius:6px;padding:6px 8px;font-size:12px}
+  input[type=range]{width:140px}
+  input[type=number]{width:70px}
+  button{cursor:pointer}
+  button:hover,select:hover,input[type=range]:hover{background:#223042}
+  .badge{display:inline-block;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.15);font-size:11px;margin-right:6px}
+  .bpos{background:#1b2a3a;color:#9ecbff}
+  .bneg{background:#3a1b1b;color:#ff9e86}
+  .bhar{background:#1b3a2a;color:#86ffb6}
+  #status{font-size:11px;color:#9ecbff;margin-top:2px}
+  #legend{font-size:11px;line-height:1.6}
+  #tooltip{position:fixed;pointer-events:none;transform:translate(12px,12px);background:#111824f2;border:1px solid #263246;border-radius:8px;padding:8px 10px;font-size:12px;min-width:200px;display:none}
+  #tooltip .sym{font-weight:700;color:#fff}
+  #tooltip .meta{color:#9ecbff}
+  #pill{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#0e1520cc;border:1px solid #223044;color:#9ecbff;border-radius:999px;padding:6px 12px;font-size:12px}
+  #ui::after{content:'';position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;background:linear-gradient(135deg, transparent 50%, #3a4755 50%)}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h1>Φ(Z,t)=Φ∞·Z^{((b+i)·2π/ln Zₘₐₓ)}·e^{−i·ω·t}</h1>
+
+  <div class="group">
+    <div class="row">
+      <label for="colorMode">Color:</label>
+      <select id="colorMode">
+        <option value="branch">Branch (±)</option>
+        <option value="shell">Shell (K→Q)</option>
+        <option value="band">EM Band</option>
+      </select>
+      <label for="size">Size:</label>
+      <input id="size" type="range" min="1" max="8" step="1" value="3">
+      <label for="opacity">Opacity:</label>
+      <input id="opacity" type="range" min="0.2" max="1" step="0.05" value="0.95">
+    </div>
+
+    <div class="row">
+      <label><input id="showPos" type="checkbox" checked> Elements (+)</label>
+      <label><input id="showNeg" type="checkbox" checked> Elements (−)</label>
+      <label><input id="showHar" type="checkbox" checked> Harmonics</label>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="row">
+      <label><input id="auto" type="checkbox" checked> Auto-rotate</label>
+      <label for="speed">Orbit Speed:</label>
+      <input id="speed" type="range" min="-2" max="2" step="0.01" value="0.30">
+      <button id="home">Home</button>
+    </div>
+    <div class="row stretch">
+      <div class="field"><span>Pitch</span><input id="camPitch" type="range" min="-90" max="90" step="0.1" value="34.4"><input id="camPitchN" type="number" step="0.1" value="34.4"></div>
+      <div class="field"><span>Yaw</span><input id="camYaw" type="range" min="-180" max="180" step="0.1" value="51.6"><input id="camYawN" type="number" step="0.1" value="51.6"></div>
+    </div>
+    <div class="row stretch">
+      <div class="field"><span>Roll</span><input id="camRoll" type="range" min="-180" max="180" step="0.1" value="0"><input id="camRollN" type="number" step="0.1" value="0"></div>
+      <div class="field"><span>Zoom</span><input id="camZoom" type="range" min="0.25" max="6" step="0.01" value="1.7"><input id="camZoomN" type="number" step="0.01" value="1.7"></div>
+    </div>
+    <div class="row">
+      <button id="viewFront">Front</button>
+      <button id="viewTop">Top</button>
+      <button id="viewSide">Side</button>
+      <button id="viewIso">Iso</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="row">
+      <label><input id="play" type="checkbox" checked> Play</label>
+      <label for="timeScale">Time Scale:</label>
+      <input id="timeScale" type="range" min="-2" max="2" step="0.01" value="0">
+      <label for="omega">ω:</label>
+      <input id="omega" type="range" min="0" max="20" step="0.01" value="6.283">
+      <input id="omegaN" type="number" step="0.001" value="6.283">
+    </div>
+    <div class="row stretch">
+      <div class="field" style="flex:1 1 auto"><span>Scrub</span><input id="timeScrub" type="range" min="0" max="600" step="0.001" value="0"></div>
+      <label><input id="manualTime" type="checkbox"> Manual</label>
+      <button id="timeReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="row">
+      <label for="trailLength">Trail Length:</label>
+      <input id="trailLength" type="range" min="0.0" max="0.99" step="0.01" value="0.92">
+      <label for="trailOpacity">Trail Opacity:</label>
+      <input id="trailOpacity" type="range" min="0.0" max="1.0" step="0.01" value="0.25">
+    </div>
+  </div>
+
+  <div id="legend" class="group">
+    <div><span class="badge bpos">Elements (+)</span><span class="badge bneg">Elements (−)</span><span class="badge bhar">Harmonics</span></div>
+    <div id="params"></div>
+    <h2 style="color: red;">x.com/ipv4addr</h2>
+  </div>
+  <div id="status"></div>
+</div>
+
+<div id="tooltip">
+  <div class="row"><div class="sym" id="tt-sym">Xx</div><div class="meta" id="tt-Z">Z=0</div></div>
+  <div class="row"><div>Shell</div><div id="tt-shell">—</div></div>
+  <div class="row"><div>Band</div><div id="tt-band">—</div></div>
+  <div class="row"><div>Branch</div><div id="tt-branch">—</div></div>
+  <div class="row"><div>f(Z)</div><div id="tt-f">—</div></div>
+</div>
+
+<div id="pill">Drag to orbit • Wheel to zoom • Shift+Drag to pan • Use controls for precise camera & time</div>
+
+<script src="index.js" defer></script>
+</body>
+</html>
